@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://your-vercel-url.vercel.app'],
+  origin: ['http://localhost:5173', 'https://petshop-app-flame.vercel.app'],
 }));
 
 app.use(express.json());
