@@ -2,11 +2,23 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 
 function ProductCard({ product }) {
-  const { addToCart } = useCart();
+  const { items, addToCart, updateQuantity } = useCart();
+
+  const cartItem = items.find((item) => item.product.id === product.id);
 
   function handleAddToCart(e) {
-    e.preventDefault(); // stop the Link navigation when clicking the button
+    e.preventDefault();
     addToCart(product);
+  }
+
+  function handleIncrease(e) {
+    e.preventDefault();
+    updateQuantity(product.id, cartItem.quantity + 1);
+  }
+
+  function handleDecrease(e) {
+    e.preventDefault();
+    updateQuantity(product.id, cartItem.quantity - 1);
   }
 
   return (
@@ -14,13 +26,6 @@ function ProductCard({ product }) {
       to={`/products/${product.id}`}
       className="relative bg-card rounded-2xl border border-ink/10 p-5 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 block"
     >
-      <div className="absolute -top-3 -right-3 rotate-6">
-        <div className="relative bg-marigold text-ink font-mono text-sm font-semibold px-3 py-1.5 rounded-md shadow-md">
-          <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-cream border border-ink/20" />
-          {'\u20B9'}{product.price}
-        </div>
-      </div>
-
       {product.imageUrl ? (
         <img
           src={product.imageUrl}
@@ -33,6 +38,13 @@ function ProductCard({ product }) {
         </div>
       )}
 
+      <div className="absolute top-3 right-3 rotate-6">
+        <div className="relative bg-marigold text-ink font-mono text-sm font-semibold px-3 py-1.5 rounded-md shadow-md">
+          <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-cream border border-ink/20" />
+          {'\u20B9'}{product.price}
+        </div>
+      </div>
+
       <span className="inline-block text-[11px] tracking-wide uppercase font-semibold text-pine bg-pine/10 px-2.5 py-1 rounded-full">
         {product.category?.name}
       </span>
@@ -43,17 +55,38 @@ function ProductCard({ product }) {
       <p className="text-sm text-ink/60 mt-1 line-clamp-2">
         {product.description}
       </p>
+
       <div className="flex items-center justify-between mt-4 pt-4 border-t border-ink/10">
         <span className="font-mono text-xs text-ink/50">
           {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
         </span>
-        <button
-          onClick={handleAddToCart}
-          disabled={product.stock === 0}
-          className="bg-pine text-cream text-sm font-medium px-4 py-2 rounded-lg hover:bg-pine/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Add to cart
-        </button>
+
+        {cartItem ? (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDecrease}
+              className="w-8 h-8 rounded-full bg-cream border border-ink/15 hover:border-pine flex items-center justify-center font-mono text-sm"
+            >
+              -
+            </button>
+            <span className="font-mono w-5 text-center text-sm">{cartItem.quantity}</span>
+            <button
+              onClick={handleIncrease}
+              disabled={cartItem.quantity >= product.stock}
+              className="w-8 h-8 rounded-full bg-cream border border-ink/15 hover:border-pine flex items-center justify-center font-mono text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleAddToCart}
+            disabled={product.stock === 0}
+            className="bg-pine text-cream text-sm font-medium px-4 py-2 rounded-lg hover:bg-pine/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Add to cart
+          </button>
+        )}
       </div>
     </Link>
   );

@@ -5,10 +5,11 @@ import { useCart } from '../context/CartContext';
 
 function ProductDetail() {
   const { id } = useParams();
-  const { addToCart } = useCart();
+  const { items, addToCart, updateQuantity } = useCart();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [added, setAdded] = useState(false);
+
+  const cartItem = items.find((item) => item.product.id === product?.id);
 
   useEffect(() => {
     setLoading(true);
@@ -20,8 +21,6 @@ function ProductDetail() {
 
   function handleAddToCart() {
     addToCart(product);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
   }
 
   if (loading) {
@@ -83,13 +82,32 @@ function ProductDetail() {
             {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
           </p>
 
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className="mt-8 w-full sm:w-auto bg-pine text-cream font-medium px-8 py-3 rounded-lg hover:bg-pine/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {added ? 'Added ✓' : 'Add to cart'}
-          </button>
+          {cartItem ? (
+            <div className="mt-8 flex items-center gap-3">
+              <button
+                onClick={() => updateQuantity(product.id, cartItem.quantity - 1)}
+                className="w-10 h-10 rounded-full bg-card border border-ink/15 hover:border-pine flex items-center justify-center font-mono"
+              >
+                -
+              </button>
+              <span className="font-mono text-lg w-8 text-center">{cartItem.quantity}</span>
+              <button
+                onClick={() => updateQuantity(product.id, cartItem.quantity + 1)}
+                disabled={cartItem.quantity >= product.stock}
+                className="w-10 h-10 rounded-full bg-card border border-ink/15 hover:border-pine flex items-center justify-center font-mono disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                +
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+              className="mt-8 w-full sm:w-auto bg-pine text-cream font-medium px-8 py-3 rounded-lg hover:bg-pine/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Add to cart
+            </button>
+          )}
         </div>
       </div>
     </div>
