@@ -8,6 +8,8 @@ function Admin() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -16,6 +18,7 @@ function Admin() {
     stock: '',
     petType: '',
     categoryId: '',
+    imageUrl: '',
   });
   const [error, setError] = useState('');
 
@@ -26,14 +29,16 @@ function Admin() {
   async function loadData() {
     setLoading(true);
     try {
-      const [productsRes, categoriesRes, statsRes] = await Promise.all([
+      const [productsRes, categoriesRes, statsRes, ordersRes] = await Promise.all([
         api.get('/products'),
         api.get('/categories'),
         api.get('/analytics/dashboard'),
+        api.get('/orders'),
       ]);
       setProducts(productsRes.data.products);
       setCategories(categoriesRes.data.categories);
       setStats(statsRes.data);
+      setOrders(ordersRes.data.orders);
     } catch (err) {
       console.error(err);
     } finally {
@@ -50,7 +55,7 @@ function Admin() {
     setError('');
     try {
       await api.post('/products', form);
-      setForm({ name: '', description: '', price: '', stock: '', petType: '', categoryId: '' });
+      setForm({ name: '', description: '', price: '', stock: '', petType: '', categoryId: '', imageUrl: '' });
       loadData();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create product');
@@ -64,6 +69,39 @@ function Admin() {
       loadData();
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function handleStatusChange(orderId, newStatus) {
+    try {
+      await api.put(`/orders/${orderId}/status`, { status: newStatus });
+      loadData();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'ckpgeroq'); 
+  
+    try {
+      const res = await fetch(
+        'https://api.cloudinary.com/v1_1/wevke5v2/image/upload', // replace YOUR_CLOUD_NAME
+        { method: 'POST', body: formData }
+      );
+      const data = await res.json();
+      setForm((prev) => ({ ...prev, imageUrl: data.secure_url }));
+    } catch (err) {
+      console.error(err);
+      setError('Image upload failed');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -122,6 +160,39 @@ function Admin() {
             </div>
         </div>
         )}
+        <div className="bg-card border border-ink/10 rounded-2xl p-6 mb-10">
+        <h2 className="font-display text-xl font-semibold text-pine mb-4">
+          Manage Orders ({orders.length})
+        </h2>
+        <div className="space-y-4">
+          {orders.map((order) => (
+            <div key={order.id} className="border border-ink/10 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="font-mono text-xs text-ink/50">
+                    #{order.id.slice(0, 8)} · {order.user?.name} · {new Date(order.createdAt).toLocaleDateString()}
+                  </p>
+                  <p className="font-display text-pine font-semibold">₹{order.totalAmount}</p>
+                </div>
+                <select
+                  value={order.status}
+                  onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                  className="border border-ink/15 rounded-lg px-3 py-1.5 text-sm bg-cream outline-none focus:border-pine"
+                >
+                  <option value="PLACED">Placed</option>
+                  <option value="PACKED">Packed</option>
+                  <option value="OUT_FOR_DELIVERY">Out for Delivery</option>
+                  <option value="DELIVERED">Delivered</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
+              <div className="text-xs text-ink/50">
+                {order.items.map((item) => `${item.product.name} ×${item.quantity}`).join(', ')}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <form onSubmit={handleCreateProduct} className="bg-card border border-ink/10 rounded-2xl p-6 h-fit">
@@ -148,6 +219,17 @@ function Admin() {
             className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
             rows={2}
           />
+          <label className="block text-sm font-medium text-ink/70 mb-1">Product Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full text-sm mb-4"
+          />
+          {uploading && <p className="text-xs text-clay mb-4">Uploading...</p>}
+          {form.imageUrl && (
+            <img src={form.imageUrl} alt="Preview" className="w-24 h-24 object-cover rounded-lg mb-4 border border-ink/10" />
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

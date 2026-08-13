@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -8,6 +8,10 @@ function Checkout() {
   const { items, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [showNewForm, setShowNewForm] = useState(false);
 
   const [address, setAddress] = useState({
     label: 'Home',
@@ -19,6 +23,20 @@ function Checkout() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/addresses')
+      .then((res) => {
+        setSavedAddresses(res.data.addresses);
+        if (res.data.addresses.length === 0) {
+          setShowNewForm(true);
+        } else {
+          setSelectedAddressId(res.data.addresses[0].id);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, [user]);
 
   function handleChange(e) {
     setAddress({ ...address, [e.target.name]: e.target.value });
@@ -35,11 +53,20 @@ function Checkout() {
 
     setLoading(true);
     try {
-      // Step 1: create the address
-      const addressRes = await api.post('/addresses', address);
-      const addressId = addressRes.data.address.id;
+      let addressId = selectedAddressId;
 
-      // Step 2: create the order
+      // If using a new address, create it first
+      if (showNewForm) {
+        const addressRes = await api.post('/addresses', address);
+        addressId = addressRes.data.address.id;
+      }
+
+      if (!addressId) {
+        setError('Please select or add a delivery address');
+        setLoading(false);
+        return;
+      }
+
       const orderItems = items.map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -76,68 +103,121 @@ function Checkout() {
             <p className="text-clay text-sm mb-4 bg-clay/10 px-3 py-2 rounded-lg">{error}</p>
           )}
 
-          <label className="block text-sm font-medium text-ink/70 mb-1">Label</label>
-          <input
-            name="label"
-            value={address.label}
-            onChange={handleChange}
-            className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
-            required
-          />
+          {savedAddresses.length > 0 && !showNewForm && (
+            <div className="space-y-3 mb-4">
+              {savedAddresses.map((addr) => (
+                <label
+                  key={addr.id}
+                  className={`block border rounded-xl p-4 cursor-pointer transition-colors ${
+                    selectedAddressId === addr.id
+                      ? 'border-pine bg-pine/5'
+                      : 'border-ink/15 hover:border-pine/50'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="savedAddress"
+                      checked={selectedAddressId === addr.id}
+                      onChange={() => setSelectedAddressId(addr.id)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <p className="font-semibold text-ink text-sm">{addr.label}</p>
+                      <p className="text-ink/60 text-sm">
+                        {addr.line1}{addr.line2 ? `, ${addr.line2}` : ''}, {addr.city}, {addr.state} - {addr.pincode}
+                      </p>
+                    </div>
+                  </div>
+                </label>
+              ))}
 
-          <label className="block text-sm font-medium text-ink/70 mb-1">Address Line 1</label>
-          <input
-            name="line1"
-            value={address.line1}
-            onChange={handleChange}
-            className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
-            required
-          />
+              <button
+                type="button"
+                onClick={() => setShowNewForm(true)}
+                className="text-pine text-sm font-medium hover:underline"
+              >
+                + Use a new address
+              </button>
+            </div>
+          )}
 
-          <label className="block text-sm font-medium text-ink/70 mb-1">Address Line 2 (optional)</label>
-          <input
-            name="line2"
-            value={address.line2}
-            onChange={handleChange}
-            className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
-          />
-
-          <div className="grid grid-cols-2 gap-4">
+          {showNewForm && (
             <div>
-              <label className="block text-sm font-medium text-ink/70 mb-1">City</label>
+              {savedAddresses.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewForm(false)}
+                  className="text-pine text-sm font-medium hover:underline mb-4"
+                >
+                  ← Choose a saved address
+                </button>
+              )}
+
+              <label className="block text-sm font-medium text-ink/70 mb-1">Label</label>
               <input
-                name="city"
-                value={address.city}
+                name="label"
+                value={address.label}
                 onChange={handleChange}
                 className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
                 required
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink/70 mb-1">State</label>
+
+              <label className="block text-sm font-medium text-ink/70 mb-1">Address Line 1</label>
               <input
-                name="state"
-                value={address.state}
+                name="line1"
+                value={address.line1}
                 onChange={handleChange}
                 className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
                 required
               />
-            </div>
-          </div>
 
-          <label className="block text-sm font-medium text-ink/70 mb-1">Pincode</label>
-          <input
-            name="pincode"
-            value={address.pincode}
-            onChange={handleChange}
-            className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-6 bg-cream outline-none focus:border-pine"
-            required
-          />
+              <label className="block text-sm font-medium text-ink/70 mb-1">Address Line 2 (optional)</label>
+              <input
+                name="line2"
+                value={address.line2}
+                onChange={handleChange}
+                className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-ink/70 mb-1">City</label>
+                  <input
+                    name="city"
+                    value={address.city}
+                    onChange={handleChange}
+                    className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink/70 mb-1">State</label>
+                  <input
+                    name="state"
+                    value={address.state}
+                    onChange={handleChange}
+                    className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-4 bg-cream outline-none focus:border-pine"
+                    required
+                  />
+                </div>
+              </div>
+
+              <label className="block text-sm font-medium text-ink/70 mb-1">Pincode</label>
+              <input
+                name="pincode"
+                value={address.pincode}
+                onChange={handleChange}
+                className="w-full border border-ink/15 rounded-lg px-3 py-2 mb-6 bg-cream outline-none focus:border-pine"
+                required
+              />
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-pine text-cream font-medium py-3 rounded-lg hover:bg-pine/90 transition-colors disabled:opacity-50"
+            className="w-full bg-pine text-cream font-medium py-3 rounded-lg hover:bg-pine/90 transition-colors disabled:opacity-50 mt-2"
           >
             {loading ? 'Placing order...' : 'Place Order'}
           </button>

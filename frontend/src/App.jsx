@@ -9,6 +9,10 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
 import Admin from './pages/Admin';
+import MyOrders from './pages/MyOrders';
+import ProductDetail from './pages/ProductDetail';
+
+
 
 function App() {
   return (
@@ -24,6 +28,8 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/order-success" element={<OrderSuccess />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/my-orders" element={<MyOrders />} />
+            <Route path="/products/:id" element={<ProductDetail />} />
           </Routes>
         </BrowserRouter>
       </CartProvider>

@@ -31,9 +31,11 @@ function Navbar() {
 
         {user ? (
           <>
+            <Link to="/my-orders" className="hover:text-pine">My Orders</Link>
             {user.role === 'ADMIN' && (
                 <Link to="/admin" className="hover:text-pine">Admin</Link>
             )}
+            
             <span className="text-pine font-semibold">Hi, {user.name.split(' ')[0]}</span>
             <button onClick={handleLogout} className="hover:text-clay">
               Logout
@@ -41,6 +43,7 @@ function Navbar() {
           </>
         ) : (
           <Link to="/login" className="hover:text-pine">Login</Link>
+          
         )}
       </div>
     </nav>

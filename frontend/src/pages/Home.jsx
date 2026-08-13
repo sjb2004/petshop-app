@@ -13,15 +13,24 @@ function Home() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPet, setSelectedPet] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     setLoading(true);
-    const query = selectedPet ? `?petType=${selectedPet}` : '';
-    api.get(`/products${query}`)
-      .then((res) => setProducts(res.data.products))
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, [selectedPet]);
+    const timeout = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (selectedPet) params.append('petType', selectedPet);
+      if (search) params.append('search', search);
+      const query = params.toString() ? `?${params.toString()}` : '';
+
+      api.get(`/products${query}`)
+        .then((res) => setProducts(res.data.products))
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false));
+    }, 300); // debounce so it doesn't fetch on every keystroke
+
+    return () => clearTimeout(timeout);
+  }, [selectedPet, search]);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -35,6 +44,19 @@ function Home() {
         <p className="text-ink/60 mt-2 max-w-md">
           Food, treats, and accessories for the pets on your street, picked and packed by us.
         </p>
+
+        <div className="mt-6 max-w-md relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search for food, treats, toys..."
+            className="w-full border border-ink/15 rounded-xl px-4 py-3 pl-11 bg-card outline-none focus:border-pine text-sm"
+          />
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/40">
+            🔍
+          </span>
+        </div>
       </header>
 
       <div className="px-8 flex gap-4 py-8">
@@ -58,7 +80,9 @@ function Home() {
         {loading ? (
           <p className="font-mono text-sm text-ink/50">Loading products...</p>
         ) : products.length === 0 ? (
-          <p className="font-mono text-sm text-ink/50">No products found.</p>
+          <p className="font-mono text-sm text-ink/50">
+            {search ? `No products found for "${search}".` : 'No products found.'}
+          </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {products.map((product) => (
