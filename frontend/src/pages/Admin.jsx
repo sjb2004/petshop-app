@@ -10,6 +10,8 @@ function Admin() {
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [weeklySummary, setWeeklySummary] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -105,6 +107,19 @@ function Admin() {
     }
   }
 
+  async function loadWeeklySummary() {
+    setSummaryLoading(true);
+    try {
+      const res = await api.get('/analytics/weekly-summary');
+      setWeeklySummary(res.data.summary);
+    } catch (err) {
+      console.error(err);
+      setWeeklySummary('Unable to generate summary right now.');
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
+
   if (!user || user.role !== 'ADMIN') {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -132,6 +147,24 @@ function Admin() {
             </div>
         </div>
         )}
+
+      <div className="bg-pine text-cream rounded-2xl p-6 mb-10">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display text-xl font-semibold">✨ Weekly AI Summary</h2>
+          <button
+            onClick={loadWeeklySummary}
+            disabled={summaryLoading}
+            className="text-xs font-mono bg-cream/10 hover:bg-cream/20 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+          >
+            {summaryLoading ? 'Generating...' : weeklySummary ? 'Regenerate' : 'Generate'}
+          </button>
+        </div>
+        {weeklySummary ? (
+          <p className="text-cream/90 leading-relaxed">{weeklySummary}</p>
+        ) : (
+          <p className="text-cream/60 text-sm">Click "Generate" to get an AI-powered summary of this week's sales.</p>
+        )}
+      </div>
 
         {stats && stats.bestSellers.length > 0 && (
         <div className="bg-card border border-ink/10 rounded-2xl p-6 mb-10">
